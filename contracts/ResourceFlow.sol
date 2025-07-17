@@ -18,8 +18,10 @@ contract ResourceFlow {
     }
 
     function storeInitialProduct(string memory resourceName, uint resourceAmount) public {
-        uint leftPercentage = 100;
-        uint perPercentage = resourceAmount * 10 ** 18 / leftPercentage;
+        uint leftPercentage = 100 * 10_000;
+        // resourceAmount * 1e18. Additionally 1e4 digits
+        // to slice the percentage floating. 
+        uint perPercentage = resourceAmount * 10 ** 22 / leftPercentage;
         storeProduct(resourceName, resourceAmount, leftPercentage, perPercentage);
     }
 

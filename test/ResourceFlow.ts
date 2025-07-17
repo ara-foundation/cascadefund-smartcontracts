@@ -50,7 +50,7 @@ describe("ResourceFlow", function () {
         await expect(contract.storeInitialProduct("customer", resourceAmount)).to.be.fulfilled;
         expect(await contract.getProductAmount()).to.equal(1n);
 
-        expect(await contract.getProduct("customer")).to.deep.equal([resourceAmount, 100n, resourceAmount * multiplier/100n]);
+        expect(await contract.getProduct("customer")).to.deep.equal([resourceAmount, 100n * 10_000n, resourceAmount * multiplier/100n]);
       });
 
       it("Taking the first product, then splitting and taking it again should work", async function () {
