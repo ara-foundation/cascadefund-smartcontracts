@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
+import "hardhat/console.sol";
 import { ICategoryContract } from "./ICategoryContract.sol";
+import { IResourceConverter } from "./IResourceConverter.sol";
 import { ResourceFlow } from "./ResourceFlow.sol";
 
 contract HyperpaymentV1 is ResourceFlow {
@@ -32,7 +34,7 @@ contract HyperpaymentV1 is ResourceFlow {
         mapping(string => address) resources;
     }
 
-    address public diffResourceConverter;
+    IResourceConverter public diffResourceConverter;
     uint public specCounter;
     mapping(uint => HyperpaymentSpecification) public specs;
 
@@ -40,6 +42,10 @@ contract HyperpaymentV1 is ResourceFlow {
     event CreateProject(uint specID, uint projectID);
 
     constructor() {}
+
+    function setDiffResourceConverter(address addr) external {
+        diffResourceConverter = IResourceConverter(addr);
+    }
 
     // Create a new hyperpayment speficication.
     function createSpecification(
@@ -100,6 +106,10 @@ contract HyperpaymentV1 is ResourceFlow {
         }
     }
 
+    function projectCounter(uint specID) external view returns (uint) {
+        return specs[specID].projectCounter;
+    }
+
     // Create a new project for the hyperpayment specification.
     function createProject(uint specID, string[] calldata userCategories, bytes[] calldata userPayloads) external {
         uint projectID = specs[specID].projectCounter + 1;
@@ -124,7 +134,7 @@ contract HyperpaymentV1 is ResourceFlow {
         // to this smartcontract.
         // TODO: Test that IERC20.balanceOf(this) === preBalance + resourceAmount
         (string memory resourceName, uint resourceAmount) = categoryContract.getInitialProduct(specID, projectID, payload);
-        
+
         // The product is stored in the resource flow.
         // TODO: Test that there are 1 product in the resource flow.
         storeInitialProduct(resourceName, resourceAmount);
@@ -133,16 +143,15 @@ contract HyperpaymentV1 is ResourceFlow {
     }
 
     function processSpline(uint specID, uint projectID, uint splineID, uint counter) internal {
+        console.log("Spline processing: ", splineID);
         Spline storage spline = specs[specID].splines[splineID];
-
-        // Make sure the spline resource exists.
-        require(bytes(spline.flow.from).length > 0, "Spline does not exist");
 
         // Split the product according to the resource flow.
         splitProducts(specID, spline.flow);
 
         // If there is a before junction, then recursively process it.
         if (spline.beforeJunction > 0) {
+            console.log("Spline has before junction: ", splineID, " jump to ", spline.beforeJunction);
             processSpline(specID, projectID, spline.beforeJunction, counter++);
         }
 
@@ -156,41 +165,40 @@ contract HyperpaymentV1 is ResourceFlow {
             resourceAmount,
             specs[specID].resources[spline.flow.to]
         );
+        console.log("Paycheck to: ", getCategory(specID, splineID), "The resource: ", spline.flow.to);
+        console.log("Amount of recources: ", resourceAmount, "\n\n");
+
         categoryContract.paycheck(specID, projectID, splineID, counter, specs[specID].resources[spline.flow.to], resourceAmount);
 
         // If there is an after junction, then resursively process it.
         if (spline.afterJunction > 0) {
+            console.log("Spline has after junction: ", splineID, " jump to ", spline.afterJunction);
             processSpline(specID, projectID, spline.afterJunction, counter++);
         }
+
+        console.log("Spline was processed: ", splineID, "\n\n");
     }
 
     // If resource type of from and to is not the same, then
     //      transfer the funds to the resource adapter.
     function splitProducts(uint specID, Flow memory flow) internal {
-        HyperpaymentSpecification storage spec = specs[specID];
-        address fromResource = spec.resources[flow.from];
-        address toResource = spec.resources[flow.to];
-        if (fromResource == toResource) {
-            convertSameResource(flow);
-        } else {
-            convertDifferentResource();
-        }
-    }
-
-    function convertSameResource(Flow memory flow) internal {
         (uint resourceAmount, uint leftPercentage, uint perPercentage) = takeProduct(flow.from);
         require(leftPercentage >= flow.percentage, "Not enough resource left to convert");
         uint toResourceAmount = (flow.percentage * perPercentage / 10_000);
-        resourceAmount -= toResourceAmount;
+        resourceAmount -= toResourceAmount / 10 ** 18;
         leftPercentage -= flow.percentage;
         if (leftPercentage > 0) {
             storeProduct(flow.from, resourceAmount, leftPercentage, perPercentage);
         }
-        storeProduct(flow.to, toResourceAmount, 100 * 10_000, toResourceAmount / 100);
-    }
 
-    function convertDifferentResource() internal {
-        
+        address fromResource = specs[specID].resources[flow.from];
+        address toResource = specs[specID].resources[flow.to];
+        if (fromResource != toResource) {
+            require(address(diffResourceConverter) != address(0), "Please, set converter");
+            toResourceAmount = diffResourceConverter.convert(toResourceAmount / 10 * 18, fromResource, toResource);
+        }
+
+        storeProduct(flow.to, toResourceAmount / 10 ** 18, 100 * 10_000, toResourceAmount / 100);
     }
 
     /**
@@ -200,8 +208,13 @@ contract HyperpaymentV1 is ResourceFlow {
         // Call IERC20(token).transfer(categoryContract, resourceAmount);
     }
 
-    function getCategoryContract(uint specID, uint splineID) public view returns (ICategoryContract) {
+    function getCategory(uint specID, uint splineID) public view returns(string memory) {
         string memory category = specs[specID].splines[splineID].category;
+        return category;
+    }
+
+    function getCategoryContract(uint specID, uint splineID) public view returns (ICategoryContract) {
+        string memory category = getCategory(specID, splineID);
         address categoryAddress = specs[specID].categories[category];
         require(categoryAddress != address(0), "Category contract address is not set");
         return ICategoryContract(categoryAddress);

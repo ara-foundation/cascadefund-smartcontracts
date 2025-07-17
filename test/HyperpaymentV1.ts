@@ -7,7 +7,7 @@ import { parseEther } from "viem";
 
 const multiplier = parseEther("1");
 
-const SCORE_TOKEN = "0x0000000000000000000000000000000000000000";
+const SCORE_TOKEN = "0x0000000000000000000000000000000000000001";
 
 type ResourceName = string;
 type CategoryName = string;
@@ -85,7 +85,7 @@ let openSourceSpecification: HyperpaymentSpecification = {
       flow: {
         from: "customer",
         to: "dep",
-        percentage: 19.1 * 10_000
+        percentage: 19.9 * 10_000
       },
       category: "dep"
     }
@@ -183,5 +183,22 @@ describe("HyperpaymentV1", function () {
         await createProject(contract);
         expect(await contract.projectCounter(1)).to.equal(1n);
       });
+  });
+
+  describe("Hyperpayment flows", function() {
+    it("Should convert resources in the same category", async function () {
+      const { contract } = await loadFixture(deployContract);
+      await createSpecification(contract);
+      await createProject(contract);
+
+      const specID = 1;
+      const projectID = 1;
+      const payload = "0x11";
+
+      expect(await contract.getProductAmount()).to.equal(0n);
+
+      await expect(contract.hyperpay(specID, projectID, payload)).to.be.fulfilled;
+      expect(await contract.getProductAmount()).to.equal(0n);
     });
+  })
 });
