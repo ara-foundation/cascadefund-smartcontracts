@@ -144,8 +144,20 @@ describe("HyperpaymentV1", function () {
     const flowFrom = splines.map((spline: Spline) => spline.flow.from);
     const flowTo = splines.map((spline: Spline) => spline.flow.to);
     const flowPercentages = splines.map((spline: Spline) => spline.flow.percentage);
-    console.log("Adding flows:", flowFrom, flowTo, flowPercentages);
-    // await expect(contract.addFlows(specID, flowFrom, flowTo, flowPercentages)).to.be.fulfilled;
+    await expect(contract.addFlows(specID, flowFrom, flowTo, flowPercentages)).to.be.fulfilled;
+  }
+
+  async function createProject(contract: any) {
+    const users: User[] = [
+          { category: "business", payload: "0x11" },
+          { category: "dep", payload: "0x11" },
+          { category: "dep", payload: "0x11" },
+          { category: "environment", payload: "0x11" }
+    ];
+    const userCategories = users.map(user => user.category);
+    const userPayloads = users.map(user => user.payload);
+    const specID = 1;
+    await expect(contract.createProject(specID, userCategories, userPayloads)).to.be.fulfilled;
   }
 
   describe("Hyperpayment Specification", function () {
@@ -167,16 +179,9 @@ describe("HyperpaymentV1", function () {
         await createSpecification(contract);
         expect(await contract.specCounter()).to.equal(1n);
 
-        const users: User[] = [
-          { category: "business", payload: "0x11" },
-          { category: "dep", payload: "0x11" },
-          { category: "dep", payload: "0x11" },
-          { category: "environment", payload: "0x11" }
-        ];
-        const userCategories = users.map(user => user.category);
-        const userPayloads = users.map(user => user.payload);
-        const specID = 1;
-        await expect(contract.createProject(specID, userCategories, userPayloads)).to.be.fulfilled;
+        expect(await contract.projectCounter(1)).to.equal(0n);
+        await createProject(contract);
+        expect(await contract.projectCounter(1)).to.equal(1n);
       });
     });
 });
