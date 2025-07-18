@@ -43,18 +43,19 @@ describe("CategoryBusiness", function () {
           deployContract
         );
 
+        const purl = "pkg:git@github.com/ahmetson/project.git"
         const username = "ahmetson";
         const authProvider = "github.com";
         const withdraw = EMPTY_ADDRESS;
 
-        const encodedPayload = hre.ethers.AbiCoder.defaultAbiCoder().encode(["string","string","address"], [username, authProvider, withdraw]);
+        const encodedPayload = hre.ethers.AbiCoder.defaultAbiCoder().encode(["string","string","string","address"], [purl, username, authProvider, withdraw]);
 
-        const calculatedPayload = await contract.encodePayload(username, authProvider, withdraw);
+        const calculatedPayload = await contract.encodePayload(purl, username, authProvider, withdraw);
         expect(calculatedPayload).to.be.equal(encodedPayload);
         // console.log(`The payload username: '${username}', auth provider: '${authProvider}', withdraw account: '${withdraw}'`)
         // console.log(`Calculated as: '${calculatedPayload}'`);
         // console.log(`Encoded as: '${encodedPayload}'`);
-        expect(await contract.decodePayload(calculatedPayload)).to.deep.equal([username, authProvider, withdraw]);
+        expect(await contract.decodePayload(calculatedPayload)).to.deep.equal([purl, username, authProvider, withdraw]);
       });
   });
 
@@ -66,6 +67,7 @@ describe("CategoryBusiness", function () {
 
       const specID = 1;
       const projectID = 1;
+      const purl = "pkg:git@github.com/ahmetson/project.git"
       const username = "ahmetson";
       const authProvider = "github.com";
       const withdraw = EMPTY_ADDRESS;
@@ -75,7 +77,7 @@ describe("CategoryBusiness", function () {
       expect(preProject.authProvider).to.be.equal("");
       expect(preProject.withdrawer).to.be.equal(EMPTY_ADDRESS);
 
-      const encodedPayload = hre.ethers.AbiCoder.defaultAbiCoder().encode(["string","string","address"], [username, authProvider, withdraw]);
+      const encodedPayload = hre.ethers.AbiCoder.defaultAbiCoder().encode(["string", "string","string","address"], [purl, username, authProvider, withdraw]);
       await expect(contract.registerUser(specID, projectID, encodedPayload)).to.be.fulfilled;
 
       const postProject = await contract.projects(specID, projectID);
@@ -87,17 +89,18 @@ describe("CategoryBusiness", function () {
 
   describe("Paycheck", function() {
     it("Should add the paychecks", async function() {
-      const { contract, testToken, testTokenAddress, owner } = await loadFixture(
+      const { contract, testToken, testTokenAddress } = await loadFixture(
         deployContract
       );
       await expect(contract.setHodleToken(testTokenAddress)).to.be.fulfilled;
 
       const specID = 1;
       const projectID = 1;
+      const purl = "pkg:git@github.com/ahmetson/project.git"
       const username = "ahmetson";
       const authProvider = "github.com";
       const withdraw = EMPTY_ADDRESS;
-      const encodedPayload = hre.ethers.AbiCoder.defaultAbiCoder().encode(["string","string","address"], [username, authProvider, withdraw]);
+      const encodedPayload = hre.ethers.AbiCoder.defaultAbiCoder().encode(["string", "string","string","address"], [purl, username, authProvider, withdraw]);
       await expect(contract.registerUser(specID, projectID, encodedPayload)).to.be.fulfilled;
 
       /**
@@ -133,10 +136,11 @@ describe("CategoryBusiness", function () {
 
       const specID = 1;
       const projectID = 1;
+      const purl = "pkg:git@github.com/ahmetson/project.git"
       const username = "ahmetson";
       const authProvider = "github.com";
       const withdraw = EMPTY_ADDRESS;
-      const encodedPayload = hre.ethers.AbiCoder.defaultAbiCoder().encode(["string","string","address"], [username, authProvider, withdraw]);
+      const encodedPayload = hre.ethers.AbiCoder.defaultAbiCoder().encode(["string", "string","string","address"], [purl, username, authProvider, withdraw]);
       await expect(contract.registerUser(specID, projectID, encodedPayload)).to.be.fulfilled;
 
       /**

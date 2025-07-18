@@ -11,6 +11,7 @@ contract CategoryBusiness is Category {
         address token;
         uint amount;
         address withdrawer;
+        string purl;
         string username;
         string authProvider;
     }
@@ -133,29 +134,31 @@ contract CategoryBusiness is Category {
      * @param payload user data encoded as ABI
      */   
     function registerUser(uint specID, uint projectID, bytes calldata payload) external returns(bool) {
-        (string memory username, string memory authProvider, address withdrawer) = decodePayload(payload);
+        (string memory purl, string memory username, string memory authProvider, address withdrawer) = decodePayload(payload);
         require(bytes(username).length > 0, "No Username provided");
         require(bytes(authProvider).length > 0, "No Auth provider");
         
         projects[specID][projectID].withdrawer = withdrawer;
+        projects[specID][projectID].purl = purl;
         projects[specID][projectID].username = username;
         projects[specID][projectID].authProvider = authProvider;
 
         return true;
     }
 
-    function encodePayload(string memory id, string memory authProvider, address withdrawer) public pure returns(bytes memory) {
-        bytes memory payload = abi.encode(id, authProvider, withdrawer);
+    function encodePayload(string memory purl, string memory username, string memory authProvider, address withdrawer) public pure returns(bytes memory) {
+        bytes memory payload = abi.encode(purl, username, authProvider, withdrawer);
         return payload;
     }
 
-    function decodePayload(bytes memory payload) public pure returns(string memory, string memory, address) {
+    function decodePayload(bytes memory payload) public pure returns(string memory, string memory, string memory, address) {
         (
-            string memory id,
+            string memory purl,
+            string memory username,
             string memory authProvider,
             address withdrawer
-        ) = abi.decode(payload, (string, string, address));
+        ) = abi.decode(payload, (string, string, string, address));
 
-        return (id, authProvider, withdrawer);
+        return (purl, username, authProvider, withdrawer);
     }
 }
