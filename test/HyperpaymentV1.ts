@@ -138,10 +138,8 @@ describe("HyperpaymentV1", function () {
     
     if (!deployToken) {
       openSourceSpecification = populateResources(openSourceSpecification, SCORE_TOKEN);
-      console.log(`\n\n\n\n\nDeploy no token`);
     } else {
-      console.log(`\n\n\n\n\nDeploy with the token`);
-      const testToken = await hre.ethers.deployContract("TestToken", [openSourceSpecification.categories["customer"]]);
+      const testToken = await hre.ethers.deployContract("TestToken", [openSourceSpecification.categories["customer"], "Gold", "GLD"]);
       const testTokenAddress = await testToken.getAddress();
       openSourceSpecification = populateResources(openSourceSpecification, testTokenAddress);
       
@@ -262,27 +260,27 @@ describe("HyperpaymentV1", function () {
       const payload = "0x11";
 
       // Check the contract parameters
-      const beforeCustomerCategory = await categories!.customer.getInfo();
-      const beforeBizCategory = await categories!.business.getInfo();
-      const beforeDepCategory = await categories!.dep.getInfo();
-      const beforeEnvironmentCategory = await categories!.environment.getInfo();
-      console.log(`Before hyperpay, the 'customer' category: ${beforeCustomerCategory![0]}, balance: ${beforeCustomerCategory![1]}`)
-      console.log(`Before hyperpay, the 'biz' category: ${beforeBizCategory![0]}, balance: ${beforeBizCategory![1]}`)
-      console.log(`Before hyperpay, the 'dep' category: ${beforeDepCategory![0]}, balance: ${beforeDepCategory![1]}`)
-      console.log(`Before hyperpay, the 'environment' category: ${beforeEnvironmentCategory![0]}, balance: ${beforeEnvironmentCategory![1]}`)
+      // const beforeCustomerCategory = await categories!.customer.getInfo();
+      // const beforeBizCategory = await categories!.business.getInfo();
+      // const beforeDepCategory = await categories!.dep.getInfo();
+      // const beforeEnvironmentCategory = await categories!.environment.getInfo();
+      // console.log(`Before hyperpay, the 'customer' category: ${beforeCustomerCategory![0]}, balance: ${beforeCustomerCategory![1]}`)
+      // console.log(`Before hyperpay, the 'biz' category: ${beforeBizCategory![0]}, balance: ${beforeBizCategory![1]}`)
+      // console.log(`Before hyperpay, the 'dep' category: ${beforeDepCategory![0]}, balance: ${beforeDepCategory![1]}`)
+      // console.log(`Before hyperpay, the 'environment' category: ${beforeEnvironmentCategory![0]}, balance: ${beforeEnvironmentCategory![1]}`)
     
       expect(await contract.getProductAmount()).to.equal(0n);
       await expect(contract.hyperpay(specID, projectID, payload)).to.be.fulfilled;
       expect(await contract.getProductAmount()).to.equal(0n);
 
-      const afterCustomerCategory = await categories!.customer.getInfo();
-      const afterBizCategory = await categories!.business.getInfo();
-      const afterDepCategory = await categories!.dep.getInfo();
-      const afterEnvironmentCategory = await categories!.environment.getInfo();
-      console.log(`After hyperpay, the 'customer' category: ${afterCustomerCategory![0]}, balance: ${afterCustomerCategory![1]}`)
-      console.log(`After hyperpay, the 'biz' category: ${afterBizCategory![0]}, balance: ${afterBizCategory![1]}`)
-      console.log(`After hyperpay, the 'dep' category: ${afterDepCategory![0]}, balance: ${afterDepCategory![1]}`)
-      console.log(`After hyperpay, the 'environment' category: ${afterEnvironmentCategory![0]}, balance: ${afterEnvironmentCategory![1]}`)
+      // const afterCustomerCategory = await categories!.customer.getInfo();
+      // const afterBizCategory = await categories!.business.getInfo();
+      // const afterDepCategory = await categories!.dep.getInfo();
+      // const afterEnvironmentCategory = await categories!.environment.getInfo();
+      // console.log(`After hyperpay, the 'customer' category: ${afterCustomerCategory![0]}, balance: ${afterCustomerCategory![1]}`)
+      // console.log(`After hyperpay, the 'biz' category: ${afterBizCategory![0]}, balance: ${afterBizCategory![1]}`)
+      // console.log(`After hyperpay, the 'dep' category: ${afterDepCategory![0]}, balance: ${afterDepCategory![1]}`)
+      // console.log(`After hyperpay, the 'environment' category: ${afterEnvironmentCategory![0]}, balance: ${afterEnvironmentCategory![1]}`)
 
     })
   })

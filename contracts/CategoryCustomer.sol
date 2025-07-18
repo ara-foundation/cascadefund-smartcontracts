@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import { Category } from "./Category.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 contract CategoryCustomer is Category {
     IERC20 public resourceToken;
@@ -38,12 +38,10 @@ contract CategoryCustomer is Category {
         uint _projectID, 
         bytes calldata _payload
     ) external returns (string memory resourceName, uint resourceAmount) {
-        console.log("Get initial product for resource token: ", address(resourceToken));
         if (address(resourceToken) == address(0)) {
             return ("customer", 100 * 10 ** 18);
         }
         (string memory cat, uint balance) = getInfo();
-        console.log("My category: ", cat, " my balance: ", balance);
         require(resourceToken.transfer(msg.sender, 100 * 10 ** 18));
         return ("customer", 100 * 10 ** 18);
     }

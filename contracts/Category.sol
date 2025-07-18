@@ -11,13 +11,7 @@ interface Category {
      * @return resourceName 
      * @return resourceAmount 
      */
-    function getInitialProduct(
-        uint specID, 
-        uint projectID, 
-        bytes calldata payload
-    ) external returns (string memory resourceName, uint resourceAmount);
-    
+    function getInitialProduct(uint specID, uint projectID, bytes calldata payload) external returns (string memory resourceName, uint resourceAmount);
     function paycheck(uint specID, uint projectID, uint splineID, uint splineCounter, address token, uint amount) external;
-    
     function registerUser(uint specID, uint projectID, bytes calldata payload) external returns(bool);
 }

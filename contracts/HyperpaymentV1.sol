@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 import { Category } from "./Category.sol";
-import { IResourceConverter } from "./IResourceConverter.sol";
+import { ResourceConverter } from "./ResourceConverter.sol";
 import { ResourceFlow } from "./ResourceFlow.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { StringUtils } from "./StringUtils.sol";
 
 contract HyperpaymentV1 is ResourceFlow {
     address constant public SCORE_TOKEN = address(0x01);
@@ -35,7 +36,7 @@ contract HyperpaymentV1 is ResourceFlow {
         mapping(string => address) resources;
     }
 
-    IResourceConverter public diffResourceConverter;
+    ResourceConverter public diffResourceConverter;
     uint public specCounter;
     mapping(uint => HyperpaymentSpecification) public specs;
 
@@ -45,7 +46,7 @@ contract HyperpaymentV1 is ResourceFlow {
     constructor() {}
 
     function setDiffResourceConverter(address addr) external {
-        diffResourceConverter = IResourceConverter(addr);
+        diffResourceConverter = ResourceConverter(addr);
     }
 
     // Create a new hyperpayment speficication.
@@ -127,22 +128,18 @@ contract HyperpaymentV1 is ResourceFlow {
         emit CreateProject(specID, projectID);
     }
 
-
     function hyperpay(uint specID, uint projectID, bytes calldata payload) external {
         Category categoryContract = getCategoryContract(specID, 0);
 
         // The Customer contract should transfer the funds
         // to this smartcontract.
-        console.log("Get the initial product");
         (string memory resourceName, uint resourceAmount) = categoryContract.getInitialProduct(specID, projectID, payload);
-        console.log("Initial product was returned");
         storeInitialProduct(resourceName, resourceAmount);
 
         processSpline(specID, projectID, 1, 1);
     }
 
     function processSpline(uint specID, uint projectID, uint splineID, uint counter) internal {
-        console.log("Spline processing: ", splineID);
         Spline storage spline = specs[specID].splines[splineID];
 
         // Split the product according to the resource flow.
@@ -150,7 +147,6 @@ contract HyperpaymentV1 is ResourceFlow {
 
         // If there is a before junction, then recursively process it.
         if (spline.beforeJunction > 0) {
-            console.log("Spline has before junction: ", splineID, " jump to ", spline.beforeJunction);
             processSpline(specID, projectID, spline.beforeJunction, counter++);
         }
 
@@ -161,18 +157,13 @@ contract HyperpaymentV1 is ResourceFlow {
             resourceAmount,
             specs[specID].resources[spline.flow.to]
         );
-        console.log("Paycheck to: ", getCategory(specID, splineID), "The resource: ", spline.flow.to);
-        console.log("Amount of recources: ", resourceAmount, "\n\n");
 
         categoryContract.paycheck(specID, projectID, splineID, counter, specs[specID].resources[spline.flow.to], resourceAmount);
 
         // If there is an after junction, then resursively process it.
         if (spline.afterJunction > 0) {
-            console.log("Spline has after junction: ", splineID, " jump to ", spline.afterJunction);
             processSpline(specID, projectID, spline.afterJunction, counter++);
         }
-
-        console.log("Spline was processed: ", splineID, "\n\n");
     }
 
     // If resource type of from and to is not the same, then
