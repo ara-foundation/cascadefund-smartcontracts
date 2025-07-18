@@ -1,11 +1,12 @@
 # CascadeFund and Hyperpayment implementation
 
 #### TODO
-- Implement user category contract that creates a deployment
-- Implement a business category that allows users to set and withdraw their tokens
-- Implement env/dep category that the list of tokens.
-- Implement single balance withdrawer such as cascadeWithdraw and Ordinary withdraw.
+// Implement tests
+- Implement tests for category sbom
+- Implement tests for category customer
+- Implement tests for hyperpayment with sbom, business and user categories
 
+// Final
 - Implement upgradeable
 - Implement access control
 
