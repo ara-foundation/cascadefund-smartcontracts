@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import "hardhat/console.sol";
-import { ICategoryContract } from "./ICategoryContract.sol";
+import { Category } from "./Category.sol";
 import { IResourceConverter } from "./IResourceConverter.sol";
 import { ResourceFlow } from "./ResourceFlow.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -119,7 +119,7 @@ contract HyperpaymentV1 is ResourceFlow {
             address categoryAddress = specs[specID].categories[userCategories[i]];
             require(categoryAddress != address(0), "Category is invalid");
 
-            ICategoryContract categoryContract = ICategoryContract(categoryAddress);
+            Category categoryContract = Category(categoryAddress);
             require(categoryContract.registerUser(specID, projectID, userPayloads[i]), "Failed to register user in category contract");
         }
 
@@ -129,7 +129,7 @@ contract HyperpaymentV1 is ResourceFlow {
 
 
     function hyperpay(uint specID, uint projectID, bytes calldata payload) external {
-        ICategoryContract categoryContract = getCategoryContract(specID, 0);
+        Category categoryContract = getCategoryContract(specID, 0);
 
         // The Customer contract should transfer the funds
         // to this smartcontract.
@@ -155,7 +155,7 @@ contract HyperpaymentV1 is ResourceFlow {
         }
 
         (uint resourceAmount,,) = takeProduct(spline.flow.to);
-        ICategoryContract categoryContract = getCategoryContract(specID, splineID);
+        Category categoryContract = getCategoryContract(specID, splineID);
         transferToCategory(
             address(categoryContract),
             resourceAmount,
@@ -212,10 +212,10 @@ contract HyperpaymentV1 is ResourceFlow {
         return category;
     }
 
-    function getCategoryContract(uint specID, uint splineID) public view returns (ICategoryContract) {
+    function getCategoryContract(uint specID, uint splineID) public view returns (Category) {
         string memory category = getCategory(specID, splineID);
         address categoryAddress = specs[specID].categories[category];
         require(categoryAddress != address(0), "Category contract address is not set");
-        return ICategoryContract(categoryAddress);
+        return Category(categoryAddress);
     }
 }

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import { ICategoryContract } from "./ICategoryContract.sol";
+import { Category } from "./Category.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "hardhat/console.sol";
 
-contract CustomerCategoryContract is ICategoryContract {
+contract CategoryCustomer is Category {
     IERC20 public resourceToken;
     string public category;
 

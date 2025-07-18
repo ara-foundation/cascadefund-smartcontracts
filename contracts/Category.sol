@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-interface ICategoryContract {
+interface Category {
     /**
      * Return the initial product to the calling smartcontract.
      * Transfers the tokens if the token is a crypto token.

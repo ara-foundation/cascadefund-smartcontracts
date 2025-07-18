@@ -121,10 +121,10 @@ describe("HyperpaymentV1", function () {
 
     const stringUtils = await hre.ethers.deployContract("StringUtils", [], {});
 
-    const customerCategory = await hre.ethers.deployContract("CustomerCategoryContract", ["customer"], {});
-    const bizCategory = await hre.ethers.deployContract("CustomerCategoryContract", ["business"], {});
-    const depCategory = await hre.ethers.deployContract("CustomerCategoryContract", ["dep"], {});
-    const environmentCategory = await hre.ethers.deployContract("CustomerCategoryContract", ["environment"], {});
+    const customerCategory = await hre.ethers.deployContract("CategoryCustomer", ["customer"], {});
+    const bizCategory = await hre.ethers.deployContract("CategoryCustomer", ["business"], {});
+    const depCategory = await hre.ethers.deployContract("CategoryCustomer", ["dep"], {});
+    const environmentCategory = await hre.ethers.deployContract("CategoryCustomer", ["environment"], {});
     
     const Contract = await hre.ethers.getContractFactory("HyperpaymentV1", {libraries: {
       StringUtils: await stringUtils.getAddress(),
