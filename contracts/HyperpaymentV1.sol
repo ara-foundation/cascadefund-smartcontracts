@@ -5,6 +5,7 @@ import "hardhat/console.sol";
 import { ICategoryContract } from "./ICategoryContract.sol";
 import { IResourceConverter } from "./IResourceConverter.sol";
 import { ResourceFlow } from "./ResourceFlow.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract HyperpaymentV1 is ResourceFlow {
     address constant public SCORE_TOKEN = address(0x01);
@@ -83,9 +84,9 @@ contract HyperpaymentV1 is ResourceFlow {
         uint splineAmount = specs[specID].splineCounter;
         // Define the splines for the hyperpayment specification.
         for (uint k = 0; k < splineAmount; k++) {
-            specs[specID].splines[k+1].beforeJunction = beforeJunction[k];
-            specs[specID].splines[k+1].afterJunction = afterJunction[k];
-            specs[specID].splines[k+1].category = category[k];
+            specs[specID].splines[k].beforeJunction = beforeJunction[k];
+            specs[specID].splines[k].afterJunction = afterJunction[k];
+            specs[specID].splines[k].category = category[k];
         }
     }
 
@@ -98,7 +99,7 @@ contract HyperpaymentV1 is ResourceFlow {
         uint splineAmount = specs[specID].splineCounter;
         // Define the splines for the hyperpayment specification.
         for (uint k = 0; k < splineAmount; k++) {
-            specs[specID].splines[k+1].flow = Flow({
+            specs[specID].splines[k].flow = Flow({
                 from: flowFrom[k],
                 to: flowTo[k],
                 percentage: flowPercentage[k]
@@ -128,15 +129,13 @@ contract HyperpaymentV1 is ResourceFlow {
 
 
     function hyperpay(uint specID, uint projectID, bytes calldata payload) external {
-        ICategoryContract categoryContract = getCategoryContract(specID, 1);
+        ICategoryContract categoryContract = getCategoryContract(specID, 0);
 
         // The Customer contract should transfer the funds
         // to this smartcontract.
-        // TODO: Test that IERC20.balanceOf(this) === preBalance + resourceAmount
+        console.log("Get the initial product");
         (string memory resourceName, uint resourceAmount) = categoryContract.getInitialProduct(specID, projectID, payload);
-
-        // The product is stored in the resource flow.
-        // TODO: Test that there are 1 product in the resource flow.
+        console.log("Initial product was returned");
         storeInitialProduct(resourceName, resourceAmount);
 
         processSpline(specID, projectID, 1, 1);
@@ -155,9 +154,6 @@ contract HyperpaymentV1 is ResourceFlow {
             processSpline(specID, projectID, spline.beforeJunction, counter++);
         }
 
-        // Call the category contract's paycheck function.
-        //      It must also transfer the funds to the paycheck.
-        //      Update the products by cleaning 0 products.
         (uint resourceAmount,,) = takeProduct(spline.flow.to);
         ICategoryContract categoryContract = getCategoryContract(specID, splineID);
         transferToCategory(
@@ -205,7 +201,10 @@ contract HyperpaymentV1 is ResourceFlow {
      * The resources will be transferred to the category contract.
      */
     function transferToCategory(address categoryContract, uint resourceAmount, address token) internal {
-        // Call IERC20(token).transfer(categoryContract, resourceAmount);
+        require(token != NATIVE_TOKEN, "Native tokens not supported yet");
+        if (token != SCORE_TOKEN) {
+            IERC20(token).transfer(categoryContract, resourceAmount);
+        }
     }
 
     function getCategory(uint specID, uint splineID) public view returns(string memory) {

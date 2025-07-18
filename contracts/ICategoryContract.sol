@@ -2,6 +2,15 @@
 pragma solidity ^0.8.28;
 
 interface ICategoryContract {
+    /**
+     * Return the initial product to the calling smartcontract.
+     * Transfers the tokens if the token is a crypto token.
+     * @param specID hyperpayment specification
+     * @param projectID project that implements the specification
+     * @param payload additional info about the transaction
+     * @return resourceName 
+     * @return resourceAmount 
+     */
     function getInitialProduct(
         uint specID, 
         uint projectID, 
