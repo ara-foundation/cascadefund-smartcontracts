@@ -2,9 +2,7 @@
 
 #### TODO
 // Implement tests
-- Implement tests for category sbom
-- Implement tests for category customer
-- Implement tests for hyperpayment with sbom, business and user categories
+- Implement tests for hyperpayment with sbom, business and user categories. If no sbom or environment then, dep is charity-edu.
 
 // Final
 - Implement upgradeable

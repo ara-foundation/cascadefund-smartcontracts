@@ -3,12 +3,12 @@ pragma solidity ^0.8.28;
 
 import { Category } from "./Category.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// import "hardhat/console.sol";
 import { OneTimeDeposit } from "./OneTimeDeposit.sol";
+// import "hardhat/console.sol";
 
 contract CategoryCustomer is Category {
     /**
-     * @dev It's used to set in the one time fees, for the latter deployment of the contract
+     * @dev in case if the user mistransferred tokens.
      */
     address public collector;
 
@@ -32,23 +32,22 @@ contract CategoryCustomer is Category {
     function getInitialProduct(
         uint _specID, 
         uint _projectID, 
-        bytes calldata _payload
+        bytes memory _payload
     ) external returns (string memory, uint) {
         // Decode the payload
         (uint counter, uint amount, address resourceToken, string memory resourceName) = decodePayload(_payload);
         require(usedCounters[counter] == false, "Counter used");
         uint salt = getSalt(_specID, _projectID, _payload);
-        bytes memory oneTimeBytecode = getBytecode();
-        address potentialAddress = getAddress(oneTimeBytecode, salt);
+        address potentialAddress = getCalculatedAddress(_specID, _projectID, _payload);
         require(withdrawnDeposits[potentialAddress] == false, "Already withdrawn");
 
         // Generate the salt by combining (counter, amount, resource name, resource token, address(this), chainid, spec and project)
         // Make sure that contract not exists (withdrawnDeposits is false)
-        OneTimeDeposit oneTimeDeposit = deploy(salt);
+        OneTimeDeposit oneTimeDeposit = _deploy(salt);
         require(address(oneTimeDeposit) == potentialAddress, "Invalid deployed depositer");
 
         uint withdrawnAmount = oneTimeDeposit.withdraw(resourceToken, amount, msg.sender);
-        require(withdrawnAmount > 0, "Not withdrawn at all");
+        require(withdrawnAmount >= amount, "Not withdrawn at all");
 
         usedCounters[counter] = true;
         withdrawnDeposits[potentialAddress] = true;
@@ -58,7 +57,7 @@ contract CategoryCustomer is Category {
         return (resourceName, withdrawnAmount);
     }
 
-    function deploy(uint _salt) public returns(OneTimeDeposit) {
+    function _deploy(uint _salt) public returns(OneTimeDeposit) {
         OneTimeDeposit _contract = new OneTimeDeposit{
             salt: bytes32(_salt)
 
@@ -67,7 +66,11 @@ contract CategoryCustomer is Category {
         return _contract;
     }
 
-    function getSalt(uint specID, uint projectID, bytes calldata _payload) public pure returns(uint) {
+    function deploy(uint _salt) external {
+        _deploy(_salt);
+    }
+
+    function getSalt(uint specID, uint projectID, bytes memory _payload) public pure returns(uint) {
         bytes32 salt = keccak256(
             abi.encodePacked(
                 specID, projectID, _payload
@@ -76,21 +79,30 @@ contract CategoryCustomer is Category {
         return uint(salt);
     }
 
-    function getAddress(bytes memory bytecode, uint _salt) public view returns (address) {
+    function getCalculatedAddress(uint _specID, uint _projectID, bytes memory _payload) public view returns (address) {
+        uint _salt = getSalt(_specID, _projectID, _payload);
         bytes32 initialCode = keccak256(
             abi.encodePacked(
-                bytes1(0xff), address(this), _salt, keccak256(bytecode)
+                bytes1(0xff), address(this), _salt, getBytecode()
             )
         );
 
         return address (uint160(uint(initialCode)));
     }
 
-    function getBytecode() public view returns (bytes memory) {
+    function getBytecode() public view returns (bytes32) {
         bytes memory bytecode = type(OneTimeDeposit).creationCode;
-        return abi.encodePacked(bytecode, abi.encode(address(this), collector));
+        return keccak256(abi.encodePacked(bytecode, abi.encode(address(this), collector)));
     }
 
+    /**
+     * 
+     * @param payload Bytes that defines the salt
+     * @return counter unique number to use for each deposit
+     * @return amount of tokens
+     * @return resourceToken the deposited token address
+     * @return resourceName is the resource name in the hyperpayment specification
+     */
     function decodePayload(bytes memory payload) public pure returns(uint, uint, address, string memory) {
         (
             uint counter,
