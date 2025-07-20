@@ -4,25 +4,43 @@ pragma solidity ^0.8.28;
 import { Category } from "./Category.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { CascadeAccount } from "./CascadeAccount.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 // import "hardhat/console.sol";
 
-contract CategorySBOM is Category {
+/**
+ * @title CategorySBOM
+ * @author Medet Ahmetson
+ * @dev This smart contract manages categories for Software Bill of Materials (SBOM) within a blockchain-based system.
+ * It allows for the creation, modification, and retrieval of SBOM for open source projects,enabling structured organization and
+ * classification of software components and their dependencies. The contract is designed to facilitate transparency,
+ * traceability, and compliance in software supply chains by providing a decentralized and immutable record of SBOM categories.
+ */
+contract CategorySBOM is Category, AccessControlUpgradeable {
     CascadeAccount public cascadeAccount;
 
     mapping(uint => mapping(uint => uint)) public packageAmount;
+    /**
+     * @notice package's purl as spec id => project id => package id
+     */
     mapping(uint => mapping(uint => mapping(uint => string))) public packages;
+
+    bytes32 public constant HYPERPAYMENT_ROLE = keccak256("HYPERPAYMENT_ROLE");
 
     event Paycheck(uint specID, uint projectID, uint packageAmount, uint splineID, uint splineCounter, uint amount, address token);
 
-    constructor(address _addr) {
-        cascadeAccount = CascadeAccount(_addr);
+    function initialize(address _cascadeAddr) initializer public {
+        cascadeAccount = CascadeAccount(_cascadeAddr);
+ 	    _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+ 	    _grantRole(HYPERPAYMENT_ROLE, msg.sender);
     }
 
-    function getInitialProduct(
-        uint,
-        uint, 
-        bytes calldata
-    ) external pure returns (string memory, uint) {
+    /**********************************************************************
+     * 
+     * Other hyperpayment smartcontracts
+     * 
+     ***********************************************************************/
+
+    function getInitialProduct(uint, uint, bytes calldata) external pure returns (string memory, uint) {
         revert("Not implemented");
     }
 
@@ -37,7 +55,7 @@ contract CategorySBOM is Category {
      * @param splineCounter spline counter (spline jump to each other doesnt mean it goes by order, so we keep track of it)
      * @param amount amount of tokens that were transferred
      */    
-    function paycheck(uint specID, uint projectID, uint splineID, uint splineCounter, address token, uint amount) external {
+    function paycheck(uint specID, uint projectID, uint splineID, uint splineCounter, address token, uint amount) external onlyRole(HYPERPAYMENT_ROLE) {
         uint filledPurl = 0;
         for (uint i = 1; i <= packageAmount[specID][projectID]; i++) {
             if (bytes(packages[specID][projectID][i]).length > 0) {
@@ -69,7 +87,7 @@ contract CategorySBOM is Category {
      * @param projectID project that implements the hyperpayment
      * @param payload user data encoded as ABI
      */   
-    function registerUser(uint specID, uint projectID, bytes calldata payload) external returns(bool) {
+    function registerUser(uint specID, uint projectID, bytes calldata payload) external onlyRole(HYPERPAYMENT_ROLE) returns(bool) {
         (uint amount, string[] memory purls) = decodePayload(payload);
         require(amount > 0, "No packages given");
         for (uint i = 1; i <= amount; i++) {
@@ -80,6 +98,12 @@ contract CategorySBOM is Category {
 
         return true;
     }
+
+    /**********************************************************************
+     * 
+     * View
+     * 
+     ***********************************************************************/
 
     function encodePayload(uint amount, string[] memory purls) public pure returns(bytes memory) {
         bytes memory payload = abi.encode(amount, purls);

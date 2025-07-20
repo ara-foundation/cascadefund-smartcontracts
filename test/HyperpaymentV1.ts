@@ -8,8 +8,6 @@ import { cwd } from "process";
 import { parseEther } from "viem";
 import fs from "fs";
 
-const multiplier = parseEther("1");
-
 const SCORE_TOKEN = "0x0000000000000000000000000000000000000001";
 const EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -143,7 +141,8 @@ describe("HyperpaymentV1", function () {
     const Contract = await hre.ethers.getContractFactory("HyperpaymentV1", {libraries: {
       StringUtils: await stringUtils.getAddress(),
     }});
-    const contract = await Contract.deploy();
+    const contract = await hre.upgrades.deployProxy(Contract, [], {unsafeAllow: ["external-library-linking"]});
+    await contract.waitForDeployment();
 
     openSourceSpecification.categories["customer"] = await customerCategory.getAddress();
     openSourceSpecification.categories["business"] = await bizCategory.getAddress();
@@ -189,22 +188,49 @@ describe("HyperpaymentV1", function () {
 
     const stringUtils = await hre.ethers.deployContract("StringUtils", [], {});
     // CategorySBOM requires
-    const cascadeAccount = await hre.ethers.deployContract("CascadeAccount", [], {
+    const CascadeAccount = await hre.ethers.getContractFactory("CascadeAccount", {
       libraries: {
         StringUtils: await stringUtils.getAddress(),
       }
     })
+    const cascadeAccount = await hre.upgrades.deployProxy(CascadeAccount, [], {unsafeAllow: ["external-library-linking"]});
+    await cascadeAccount.waitForDeployment();
     const cascadeAccountAddress = await cascadeAccount.getAddress();
 
-    const customerCategory = await hre.ethers.deployContract("CategoryCustomer", [owner.address], {});
-    const bizCategory = await hre.ethers.deployContract("CategoryBusiness", [], {});
-    const depCategory = await hre.ethers.deployContract("CategorySBOM", [cascadeAccountAddress], {});
-    const environmentCategory = await hre.ethers.deployContract("CategorySBOM", [cascadeAccountAddress], {});
-    
+    const CustomerCategory = await hre.ethers.getContractFactory("CategoryCustomer", {});
+    const customerCategory = await hre.upgrades.deployProxy(CustomerCategory, []);
+    await customerCategory.waitForDeployment();
+
+    const BizCategory = await hre.ethers.getContractFactory("CategoryBusiness");
+    const bizCategory = await hre.upgrades.deployProxy(BizCategory, []);
+    await bizCategory.waitForDeployment();
+
+    const DepCategory = await hre.ethers.getContractFactory("CategorySBOM", {});
+    const depCategory = await hre.upgrades.deployProxy(DepCategory, [cascadeAccountAddress]);
+    await depCategory.waitForDeployment();
+
+    const EnvironmentCategory = await hre.ethers.getContractFactory("CategorySBOM", {});
+    const environmentCategory = await hre.upgrades.deployProxy(EnvironmentCategory, [cascadeAccountAddress]);
+    await environmentCategory.waitForDeployment();
+
+    // Link CascadeAccount to the CategorySBOM
+    const hyperpaymentRole = await cascadeAccount.HYPERPAYMENT_ROLE();
+    await cascadeAccount.grantRole(hyperpaymentRole, await depCategory.getAddress());
+    await cascadeAccount.grantRole(hyperpaymentRole, await environmentCategory.getAddress());
+
     const Contract = await hre.ethers.getContractFactory("HyperpaymentV1", {libraries: {
       StringUtils: await stringUtils.getAddress(),
     }});
-    const contract = await Contract.deploy();
+    const contract = await hre.upgrades.deployProxy(Contract, [], {unsafeAllow: ["external-library-linking"]});
+    await contract.waitForDeployment();
+    const hyperpaymentAddress = await contract.getAddress();
+
+    // Grant the to the hyperpayment smartcontract
+    const hyperpaymentRole1 = await customerCategory.HYPERPAYMENT_ROLE();
+    await customerCategory.grantRole(hyperpaymentRole1, hyperpaymentAddress);
+    await bizCategory.grantRole(hyperpaymentRole1, hyperpaymentAddress);
+    await depCategory.grantRole(hyperpaymentRole1, hyperpaymentAddress);
+    await environmentCategory.grantRole(hyperpaymentRole1, hyperpaymentAddress);
 
     openSourceSpecification.categories["customer"] = await customerCategory.getAddress();
     openSourceSpecification.categories["business"] = await bizCategory.getAddress();

@@ -15,7 +15,8 @@ describe("CategoryBusiness", function () {
     const [owner, otherAccount] = await hre.ethers.getSigners();
 
     const Contract = await hre.ethers.getContractFactory("CategoryBusiness");
-    const contract = await Contract.deploy();
+    const contract = await hre.upgrades.deployProxy(Contract, []);
+    await contract.waitForDeployment();
 
     const testToken = await hre.ethers.deployContract("TestToken", [owner, "Gold", "GLD"]);
     const testTokenAddress = await testToken.getAddress();
@@ -156,6 +157,9 @@ describe("CategoryBusiness", function () {
        * WITHDRAW some portion
        */
       const withdrawAmount = parseEther("23.3");
+
+      const withdrawerRole = await contract.WITHDRAWER_ROLE();
+      await expect(contract.grantRole(withdrawerRole, otherAccount.address)).to.be.fulfilled;
       await expect(contract.connect(otherAccount).withdraw(specID, projectID, withdrawAmount)).to.be.rejectedWith("Caller is not a withdrawer");
       await expect(contract.withdraw(specID, projectID, withdrawAmount)).to.be.rejectedWith("Caller is not a withdrawer");
       await expect(contract.setWithdrawer(specID, projectID, owner.address)).to.be.fulfilled;

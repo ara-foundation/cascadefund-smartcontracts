@@ -7,8 +7,19 @@ import { ResourceConverter } from "./ResourceConverter.sol";
 import { ResourceFlow } from "./ResourceFlow.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { StringUtils } from "./StringUtils.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-contract HyperpaymentV1 is ResourceFlow {
+/**
+ * @title HyperpaymentV1
+ * @author hyperpayment.org contributors
+ * @notice This smart contract implements the hyperpayment.org specification on blockchain.
+ *         It enables programmable, multi-party payments (hyperpayments) for projects by defining
+ *         specifications that describe how resources (tokens) flow through user categories and splines.
+ *         The contract supports resource conversion, category registration, and recursive payment
+ *         splitting according to customizable flows, allowing for transparent and automated
+ *         distribution of funds among multiple stakeholders.
+ */
+contract HyperpaymentV1 is ResourceFlow, AccessControlUpgradeable {
     address constant public SCORE_TOKEN = address(0x01);
     address constant public NATIVE_TOKEN = address(0x02);
 
@@ -40,16 +51,42 @@ contract HyperpaymentV1 is ResourceFlow {
     uint public specCounter;
     mapping(uint => HyperpaymentSpecification) public specs;
 
+    bytes32 public constant HYPERPAYMENT_ROLE = keccak256("HYPERPAYMENT_ROLE");
+    bytes32 public constant SERVER_ROLE = keccak256("SERVER_ROLE");
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+
     event CreateSpecification(uint specID, string url, uint categoryCounter, uint resourceCounter, uint splineCounter);
     event CreateProject(uint specID, uint projectID);
 
-    constructor() {}
+    function initialize() initializer public {
+ 	    _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+ 	    _grantRole(HYPERPAYMENT_ROLE, msg.sender);
+ 	    _grantRole(SERVER_ROLE, msg.sender);
+ 	    _grantRole(MANAGER_ROLE, msg.sender);
+    }
 
-    function setDiffResourceConverter(address addr) external {
+    /**********************************************************************
+     * 
+     * Manager from the admin or right from the etherscan.io like explorer
+     * 
+     ***********************************************************************/
+
+    function setDiffResourceConverter(address addr) external onlyRole(MANAGER_ROLE) {
         diffResourceConverter = ResourceConverter(addr);
     }
 
-    // Create a new hyperpayment speficication.
+    /**
+     * Create a new hyperpayment specification implementing
+     * https://www.hyperpayment.org/protocol
+     * @param _url URL where the document is defined 
+     * based on https://www.hyperpayment.org/specification/hyperpayment-template template
+     * @param _categoriesAddresses smartcontracts that handles resources for each category of the users
+     * @param _categoryNames name of the categories
+     * @param _resourceNames name of the resources
+     * @param _resources token address of the resources, since in blockchain the resource is ERC20 token
+     * @param _splinesAmount how many spline hops the specification will have
+     * @notice call addSplines() and call addFlows() after calling this function
+     */
     function createSpecification(
         string calldata _url,
         address[] calldata _categoriesAddresses,
@@ -57,7 +94,7 @@ contract HyperpaymentV1 is ResourceFlow {
         string[] calldata _resourceNames,
         address[] calldata _resources,
         uint _splinesAmount
-    ) external {
+    ) external onlyRole(MANAGER_ROLE) {
         specCounter++;
 
         specs[specCounter].url = _url;
@@ -76,12 +113,20 @@ contract HyperpaymentV1 is ResourceFlow {
         emit CreateSpecification(specCounter, _url, _categoryNames.length, _resources.length, _splinesAmount);
     }
 
+    /**
+     * Add the splines between user categories
+     * @param specID hyperpayment specification
+     * @param beforeJunction the spline id to invoke before processing this spline
+     * @param afterJunction jumpt to this spline id after processing this spline
+     * @param category spline related to this category
+     * @notice call it before createSpecification(), then, after this function, call the addFlows().
+     */
     function addSplines(
         uint specID,
         uint[] calldata beforeJunction,
         uint[] calldata afterJunction,
         string[] calldata category
-    ) external {
+    ) external onlyRole(MANAGER_ROLE) {
         uint splineAmount = specs[specID].splineCounter;
         // Define the splines for the hyperpayment specification.
         for (uint k = 0; k < splineAmount; k++) {
@@ -91,12 +136,20 @@ contract HyperpaymentV1 is ResourceFlow {
         }
     }
 
+    /**
+     * Add the flow of resources in the splines
+     * @param specID hyperpayment specification
+     * @param flowFrom what resoufce we take
+     * @param flowTo what resource is required
+     * @param flowPercentage the target resource is this percentage of the flow form.
+     * @notice this is the last function to call after the addSplines()
+     */
     function addFlows(
         uint specID,
         string[] calldata flowFrom,
         string[] calldata flowTo,
         uint[] calldata flowPercentage
-    ) external {
+    ) external onlyRole(MANAGER_ROLE) {
         uint splineAmount = specs[specID].splineCounter;
         // Define the splines for the hyperpayment specification.
         for (uint k = 0; k < splineAmount; k++) {
@@ -108,12 +161,23 @@ contract HyperpaymentV1 is ResourceFlow {
         }
     }
 
-    function projectCounter(uint specID) external view returns (uint) {
-        return specs[specID].projectCounter;
-    }
+    /**********************************************************************
+     * 
+     * Control by the server
+     * 
+     ***********************************************************************/
 
-    // Create a new project for the hyperpayment specification.
-    function createProject(uint specID, string[] calldata userCategories, bytes[] calldata userPayloads) external {
+    /**
+     * Register a new project for the hyperpayment specification
+     * @param specID hyperpayment that this project relies on.
+     * @param userCategories list of categories to use as a key for the payload
+     * @param userPayloads parameter of the user defined specifically by the user payloads
+     */
+    function createProject(
+        uint specID, 
+        string[] calldata userCategories, 
+        bytes[] calldata userPayloads
+    ) external onlyRole(SERVER_ROLE) {
         uint projectID = specs[specID].projectCounter + 1;
 
         for (uint i = 0; i < userCategories.length; i++) {
@@ -128,7 +192,13 @@ contract HyperpaymentV1 is ResourceFlow {
         emit CreateProject(specID, projectID);
     }
 
-    function hyperpay(uint specID, uint projectID, bytes calldata payload) external {
+    /**
+     * Hyperpayment method initiation.
+     * @param specID hyperpayment specification to work with
+     * @param projectID category users related to this project id
+     * @param payload initial resource product info
+     */
+    function hyperpay(uint specID, uint projectID, bytes calldata payload) external onlyRole(SERVER_ROLE) {
         Category categoryContract = getCategoryContract(specID, 0);
 
         // The Customer contract should transfer the funds
@@ -196,6 +266,16 @@ contract HyperpaymentV1 is ResourceFlow {
         if (token != SCORE_TOKEN) {
             IERC20(token).transfer(categoryContract, resourceAmount);
         }
+    }
+
+    /**********************************************************************
+     * 
+     * View
+     * 
+     ***********************************************************************/
+
+    function projectCounter(uint specID) external view returns (uint) {
+        return specs[specID].projectCounter;
     }
 
     function getCategory(uint specID, uint splineID) public view returns(string memory) {

@@ -7,7 +7,7 @@ import { parseEther } from "viem";
 
 const EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-describe("CategorySBOM", function () {
+describe("CategoryCustomer", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
@@ -15,7 +15,8 @@ describe("CategorySBOM", function () {
     const [owner, otherAccount] = await hre.ethers.getSigners();
 
     const Contract = await hre.ethers.getContractFactory("CategoryCustomer", {});
-    const contract = await Contract.deploy(owner.address);
+    const contract = await hre.upgrades.deployProxy(Contract, []);
+    await contract.waitForDeployment();
 
     const testToken = await hre.ethers.deployContract("TestToken", [owner, "Gold", "GLD"]);
     const testTokenAddress = await testToken.getAddress();
@@ -101,6 +102,9 @@ describe("CategorySBOM", function () {
       console.log(`The address of deposit: ${calculatedAddress}, resource name: ${resourceName}`)
       await expect(testToken.transfer(calculatedAddress, amount)).to.be.fulfilled;
       // initial product called by hyperpayment function
+
+      const hyperpaymentRole = await contract.HYPERPAYMENT_ROLE();
+      await expect(contract.grantRole(hyperpaymentRole, hyperpaymentV1.address)).to.be.fulfilled;
       await expect(contract.connect(hyperpaymentV1).getInitialProduct(specID, projectID, encodedPayload)).to.be.fulfilled;
       console.log(`Server must put the countrer so it won't be repeated`);
 

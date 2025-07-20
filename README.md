@@ -1,12 +1,12 @@
 # CascadeFund and Hyperpayment implementation
 
 #### TODO
-// Final
-- Implement upgradeable
-- Implement access control
 
-// After grant
+##### V2
+- OneTimeDeposit in CategoryCustomer should be set in the initializer, and we can update it later as a manager.
 - Implement token converter
+- implement the deploy smartcontracts
+---
 
 This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
 

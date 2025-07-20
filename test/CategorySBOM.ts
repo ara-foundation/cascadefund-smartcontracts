@@ -8,8 +8,6 @@ import fs from "fs";
 import { cwd } from "process";
 import path from "path";
 
-const EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000";
-
 type PackageJSON = {
   name: string;
   devDependencies?: {
@@ -42,14 +40,21 @@ describe("CategorySBOM", function () {
     const [owner, otherAccount] = await hre.ethers.getSigners();
 
     const stringUtils = await hre.ethers.deployContract("StringUtils", [], {});
-    const cascadeAccount = await hre.ethers.deployContract("CascadeAccount", [], {
+    const CascadeAccount = await hre.ethers.getContractFactory("CascadeAccount", {
       libraries: {
         StringUtils: await stringUtils.getAddress(),
       }
     })
+    const cascadeAccount = await hre.upgrades.deployProxy(CascadeAccount, [], {unsafeAllow: ['external-library-linking']});
+    await cascadeAccount.waitForDeployment();
 
     const Contract = await hre.ethers.getContractFactory("CategorySBOM", {});
-    const contract = await Contract.deploy(await cascadeAccount.getAddress());
+    const contract = await hre.upgrades.deployProxy(Contract, [await cascadeAccount.getAddress()]);
+    await contract.waitForDeployment();
+
+    // Link CascadeAccount to the CategorySBOM
+    const hyperpaymentRole = await cascadeAccount.HYPERPAYMENT_ROLE();
+    await cascadeAccount.grantRole(hyperpaymentRole, await contract.getAddress());
 
     const testToken = await hre.ethers.deployContract("TestToken", [owner, "Gold", "GLD"]);
     const testTokenAddress = await testToken.getAddress();
@@ -125,7 +130,6 @@ describe("CategorySBOM", function () {
       const encodedPayload = hre.ethers.AbiCoder.defaultAbiCoder().encode(["uint", "string[]"], [purls.length, purls]);
       await expect(contract.registerUser(specID, projectID, encodedPayload)).to.be.fulfilled;
 
-      const packageID = 1;
       /**
        * Before paycheck:
        */

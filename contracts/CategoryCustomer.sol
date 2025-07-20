@@ -4,9 +4,19 @@ pragma solidity ^0.8.28;
 import { Category } from "./Category.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { OneTimeDeposit } from "./OneTimeDeposit.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 // import "hardhat/console.sol";
 
-contract CategoryCustomer is Category {
+/**
+ * @title CategoryCustomer
+ * @author Medet Ahmetson
+ * @notice This contract manages user deposits and withdrawals for a hyperpayment system.
+ *         It ensures that each deposit is uniquely tracked and can only be withdrawn once,
+ *         using deterministic contract deployment (CREATE2) for secure and predictable deposit handling.
+ *         The contract also provides mechanisms to prevent double withdrawals and to recover tokens
+ *         in case of user mistakes.
+ */
+contract CategoryCustomer is Category, AccessControlUpgradeable {
     /**
      * @dev in case if the user mistransferred tokens.
      */
@@ -15,11 +25,23 @@ contract CategoryCustomer is Category {
     mapping(uint => bool) public usedCounters;
     mapping(address => bool) public withdrawnDeposits;
 
+    bytes32 public constant HYPERPAYMENT_ROLE = keccak256("HYPERPAYMENT_ROLE");
+    bytes32 public constant SERVER_ROLE = keccak256("SERVER_ROLE");
+
     event Withdraw(uint specID, uint projectID, uint counter, uint amount);
 
-    constructor(address _collector) {
-        collector = _collector;
+    function initialize() initializer public {
+        collector = msg.sender;
+ 	    _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+ 	    _grantRole(HYPERPAYMENT_ROLE, msg.sender);
+ 	    _grantRole(SERVER_ROLE, msg.sender);
     }
+
+    /**********************************************************************
+     * 
+     * Other hyperpayment smartcontracts
+     * 
+     ***********************************************************************/
 
     /**
      * Returns the resources deposited by the users.
@@ -33,7 +55,7 @@ contract CategoryCustomer is Category {
         uint _specID, 
         uint _projectID, 
         bytes memory _payload
-    ) external returns (string memory, uint) {
+    ) external onlyRole(HYPERPAYMENT_ROLE) returns(string memory, uint) {
         // Decode the payload
         (uint counter, uint amount, address resourceToken, string memory resourceName) = decodePayload(_payload);
         require(usedCounters[counter] == false, "Counter used");
@@ -57,7 +79,21 @@ contract CategoryCustomer is Category {
         return (resourceName, withdrawnAmount);
     }
 
-    function _deploy(uint _salt) public returns(OneTimeDeposit) {
+    function paycheck(uint, uint, uint, uint, address, uint) external pure {
+        revert("Not implemented");
+    }
+    
+    function registerUser(uint, uint, bytes calldata) external pure returns(bool) {
+        revert("Not implemented");
+    }
+
+    /**********************************************************************
+     * 
+     * Control by the server
+     * 
+     ***********************************************************************/
+
+    function _deploy(uint _salt) internal returns(OneTimeDeposit) {
         OneTimeDeposit _contract = new OneTimeDeposit{
             salt: bytes32(_salt)
 
@@ -66,9 +102,15 @@ contract CategoryCustomer is Category {
         return _contract;
     }
 
-    function deploy(uint _salt) external {
+    function deploy(uint _salt) external onlyRole(SERVER_ROLE) {
         _deploy(_salt);
     }
+
+    /**********************************************************************
+     * 
+     * View
+     * 
+     ***********************************************************************/
 
     function getSalt(uint specID, uint projectID, bytes memory _payload) public pure returns(uint) {
         bytes32 salt = keccak256(
@@ -117,11 +159,5 @@ contract CategoryCustomer is Category {
         return (counter, amount, resourceToken, resourceName);
     }
     
-    function paycheck(uint, uint, uint, uint, address, uint) external pure {
-        revert("Not implemented");
-    }
-    
-    function registerUser(uint, uint, bytes calldata) external pure returns(bool) {
-        revert("Not implemented");
-    }
+
 }
