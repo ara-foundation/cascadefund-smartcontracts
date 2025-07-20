@@ -1,9 +1,6 @@
 # CascadeFund and Hyperpayment implementation
 
 #### TODO
-// Implement tests
-- Implement tests for hyperpayment with sbom, business and user categories. If no sbom or environment then, dep is charity-edu.
-
 // Final
 - Implement upgradeable
 - Implement access control

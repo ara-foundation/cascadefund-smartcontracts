@@ -3,11 +3,25 @@ import {
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import hre from "hardhat";
+import path from "path";
+import { cwd } from "process";
 import { parseEther } from "viem";
+import fs from "fs";
 
 const multiplier = parseEther("1");
 
 const SCORE_TOKEN = "0x0000000000000000000000000000000000000001";
+const EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+type PackageJSON = {
+  name: string;
+  devDependencies?: {
+    [key: string]: string
+  },
+  dependencies?: {
+    [key: string]: string
+  },
+}
 
 type ResourceName = string;
 type CategoryName = string;
@@ -170,6 +184,55 @@ describe("HyperpaymentV1", function () {
     };
   }
 
+  async function deployVariousContracts() {
+    const [owner, otherAccount] = await hre.ethers.getSigners();
+
+    const stringUtils = await hre.ethers.deployContract("StringUtils", [], {});
+    // CategorySBOM requires
+    const cascadeAccount = await hre.ethers.deployContract("CascadeAccount", [], {
+      libraries: {
+        StringUtils: await stringUtils.getAddress(),
+      }
+    })
+    const cascadeAccountAddress = await cascadeAccount.getAddress();
+
+    const customerCategory = await hre.ethers.deployContract("CategoryCustomer", [owner.address], {});
+    const bizCategory = await hre.ethers.deployContract("CategoryBusiness", [], {});
+    const depCategory = await hre.ethers.deployContract("CategorySBOM", [cascadeAccountAddress], {});
+    const environmentCategory = await hre.ethers.deployContract("CategorySBOM", [cascadeAccountAddress], {});
+    
+    const Contract = await hre.ethers.getContractFactory("HyperpaymentV1", {libraries: {
+      StringUtils: await stringUtils.getAddress(),
+    }});
+    const contract = await Contract.deploy();
+
+    openSourceSpecification.categories["customer"] = await customerCategory.getAddress();
+    openSourceSpecification.categories["business"] = await bizCategory.getAddress();
+    openSourceSpecification.categories["dep"] = await depCategory.getAddress();
+    openSourceSpecification.categories["environment"] = await environmentCategory.getAddress();
+    
+    const testToken = await hre.ethers.deployContract("TestToken", [owner.address, "Gold", "GLD"]);
+    const testTokenAddress = await testToken.getAddress();
+    openSourceSpecification = populateResources(openSourceSpecification, testTokenAddress);
+  
+    // Business category requires hodler
+    await bizCategory.setHodleToken(testTokenAddress);
+
+    return {
+        contract,
+        categories: {
+          customer: customerCategory,
+          business: bizCategory,
+          dep: depCategory,
+          environment: environmentCategory,
+        },
+        owner,
+        otherAccount,
+        testToken,
+        testTokenAddress
+    }
+  }
+
   async function createSpecification(contract: any) {
     const url = openSourceSpecification.url;
     const categoryNames = Object.keys(openSourceSpecification.categories);
@@ -199,6 +262,55 @@ describe("HyperpaymentV1", function () {
           { category: "dep", payload: "0x11" },
           { category: "environment", payload: "0x11" }
     ];
+    const userCategories = users.map(user => user.category);
+    const userPayloads = users.map(user => user.payload);
+    const specID = 1;
+    await expect(contract.createProject(specID, userCategories, userPayloads)).to.be.fulfilled;
+  }
+
+  function getBusinessPayload(): string {
+    const purl = "pkg:git@github.com/ahmetson/project.git"
+    const username = "ahmetson";
+    const authProvider = "github.com";
+    const withdraw = EMPTY_ADDRESS;
+    const encodedPayload = hre.ethers.AbiCoder.defaultAbiCoder().encode(["string","string","string","address"], [purl, username, authProvider, withdraw]);
+
+    return encodedPayload;
+  }
+
+  function getEnvPayload(): string {
+    const envs = ["env:charity"];
+    const encodedPayload = hre.ethers.AbiCoder.defaultAbiCoder().encode(["uint","string[]"], [envs.length, envs]);
+    return encodedPayload;
+  }
+
+  function getPurls(): string[] {
+      const url = path.join(cwd(), './package.json');
+      const packageJSON = JSON.parse(fs.readFileSync(url, { encoding: 'utf-8' })) as PackageJSON;
+      let deps: string[] = [];
+      if (packageJSON.dependencies) {
+        deps = Object.keys(packageJSON.dependencies).map(dep => `pkg:npm/${dep}@latest`);
+      }
+      if (packageJSON.devDependencies) {
+        const devDeps = Object.keys(packageJSON.devDependencies).map(dep => `pkg:npm/${dep}@latest`);
+        deps = deps.concat(...devDeps);
+      }
+      return deps;
+  }
+
+  function getDepPayload(): string {
+    const purls = getPurls();
+    const encodedPayload = hre.ethers.AbiCoder.defaultAbiCoder().encode(["uint","string[]"], [purls.length, purls]);
+    return encodedPayload;
+  }
+
+  async function createVariousCategoryProject(contract: any) {
+    const users: User[] = [
+      { category: "business", payload: getBusinessPayload() },
+      { category: "environment", payload: getEnvPayload() },
+      { category: "dep", payload: getDepPayload() }
+    ];
+
     const userCategories = users.map(user => user.category);
     const userPayloads = users.map(user => user.payload);
     const specID = 1;
@@ -282,6 +394,35 @@ describe("HyperpaymentV1", function () {
       // console.log(`After hyperpay, the 'dep' category: ${afterDepCategory![0]}, balance: ${afterDepCategory![1]}`)
       // console.log(`After hyperpay, the 'environment' category: ${afterEnvironmentCategory![0]}, balance: ${afterEnvironmentCategory![1]}`)
 
+    })
+  })
+
+  describe("Various categories", function() {
+    it("Deploy customer/business/dep", async function() {
+      const { contract, categories, testTokenAddress, testToken } = await deployVariousContracts();
+      await createSpecification(contract);
+      await createVariousCategoryProject(contract);
+
+      //
+      // Imitate the user's deposit
+      //
+      const counter = 1;
+      const amount = parseEther("50");
+      const resourceToken = testTokenAddress;
+      const resourceName = "customer";
+      const encodedPayload = hre.ethers.AbiCoder.defaultAbiCoder().encode(["uint","uint","address","string"], [counter, amount, resourceToken, resourceName]);
+
+      const specID = 1;
+      const projectID = 1;
+
+      const calculatedAddress = await categories.customer.getCalculatedAddress(specID, projectID, encodedPayload);
+      await expect(testToken.transfer(calculatedAddress, amount)).to.be.fulfilled;
+
+      //
+      // Hyperpay
+      //
+      console.log(`The customer category address: ${await categories.customer.getAddress()}`);
+      await expect(contract.hyperpay(specID, projectID, encodedPayload)).to.be.fulfilled;
     })
   })
 });
