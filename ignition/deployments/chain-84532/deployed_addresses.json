@@ -1,0 +1,21 @@
+{
+  "StringUtilsModule#StringUtils": "0x9b69E72D065600f552916Da94023F5B8A423b716",
+  "CascadeAccountModule#StringUtils": "0xB8F038240c17Dd0C704bA3671E355f78CEed343B",
+  "CascadeAccountModule#CascadeAccount": "0xF0783e046a74debDf00902C28cE8BEBE5eD415B5",
+  "CategoryBusinessModule#CategoryBusiness": "0x886Fe7b510d53a5Ae9493C932c957e13622bbd7c",
+  "CategoryBusinessModule#TransparentUpgradeableProxy": "0xfc1d17F71B81e82aBd861A6A5a02Fd9EEa0A643c",
+  "CategoryBusinessModule#ProxyAdmin": "0x2d763a86b3a24425b1Ac1940E3c317B9f15c337e",
+  "CascadeAccountModule#TransparentUpgradeableProxy": "0x573209D42d347489eA425Df444Df417Ba783c657",
+  "CascadeAccountModule#ProxyAdmin": "0xC40131515c06D8d522645336ae07D2457c2f1e2b",
+  "CategorySbomModule#CategorySBOM": "0x6b70299cB895880D43603af8E9a7D07D3d2212f5",
+  "CategorySbomModule#TransparentUpgradeableProxy": "0x845f57C038d0205c88D6BC19138b860c69F8E192",
+  "CategorySbomModule#ProxyAdmin": "0x710d2189e0c2C024A22522f1f4b39ebEFb523148",
+  "CategoryCustomerModule#CategoryCustomer": "0xb291B3486eC3836A63A0dADB2505a184b449CD9D",
+  "CategoryCustomerModule#TransparentUpgradeableProxy": "0x120891bEb44c0F448f71489Ad14e65B557E10EEb",
+  "CategoryCustomerModule#ProxyAdmin": "0x927f7505565c5DF1696a819Fd3356d3CE8eB01B9",
+  "HyperpaymentV1Module#StringUtils": "0x6661c93854cC6116e66D64030C9214746f4FeC2A",
+  "HyperpaymentV1Module#HyperpaymentV1": "0x2308f043474eF95bA911F189b01E3450B93B4128",
+  "HyperpaymentV1Module#TransparentUpgradeableProxy": "0xD6285Ab40a99327CEfc344C88932bB27C4fCeF49",
+  "HyperpaymentV1Module#ProxyAdmin": "0x1D3B0Ed71D38F6b78ff18ea71c02c6A0DD7f3FFc",
+  "TestTokenModule#TestToken": "0xE4A6f0aba700F7964599c7Cd21b9c17Bf3fab988"
+}

@@ -388,7 +388,7 @@ describe("HyperpaymentV1", function () {
 
     it("Should process payment using tokens", async function() {
       deployToken = true;
-      const { contract, categories } = await deployContract();
+      const { contract } = await deployContract();
       await createSpecification(contract);
       await createProject(contract);
       deployToken = false;
