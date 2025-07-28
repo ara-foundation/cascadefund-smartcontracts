@@ -70,10 +70,10 @@ contract CascadeAccount2 is AccessControlUpgradeable {
         string calldata _username, 
         string calldata _authProvider
     ) external onlyRole(SERVER_ROLE) {
-        if (cascadeAccounts[purl].withdrawer != _addr) {
+        if (_addr != address(0) && cascadeAccounts[purl].withdrawer != _addr) {
             cascadeAccounts[purl].withdrawer = _addr;
         }
-        if (!StringUtils.equal(cascadeAccounts[purl].username, _username)) {
+        if (bytes(_username).length > 0 && !StringUtils.equal(cascadeAccounts[purl].username, _username)) {
             cascadeAccounts[purl].username = _username;
             cascadeAccounts[purl].authProvider = _authProvider;
         }

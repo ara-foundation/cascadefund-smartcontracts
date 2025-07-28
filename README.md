@@ -16,6 +16,23 @@ protocol as a EVM based blockchain smartcontracts.
 ---
 
 ## Deployed addresses
+> `./lib/deployed_contracts.json`
+
+For easy use, you can also use the following:
+
+```bash
+npm i @ara-web/cascadefund-smartcontracts
+```
+
+Then, use the deployed json:
+
+```typescript
+import deployedContracts from "@ara-web/cascadefund-smartcontracts/lib/deployed_contracts.json"
+```
+
+> To work with the json, in your `tsconfig.json` make sure you set `"resolveJsonModule": true`.
+
+---
 
 * `StringUtils` &ndash; a string related **library** on *BaseSepolia*: [contracts/StringUtils.sol:StringUtils](https://sepolia.basescan.org/address/0x9b69E72D065600f552916Da94023F5B8A423b716#code)
 * `CascadeAccount` &ndash; a smartcontract to indirectly collect tips from all donations on *BaseSepolia*: [explorer](https://sepolia.basescan.org/address/0xe6c77Aa2796d7446e0433fd959B6E8a0F949971e#code)
@@ -36,3 +53,14 @@ npx hardhat run scripts/opensource.hyperpayment.spec.ts --network baseSepolia
 
 ## Links
 - Official [Hardhat Upgradeable deployment and updates](https://hardhat.org/ignition/docs/guides/upgradeable-proxies) documentation.
+
+## For the maintainers
+
+If any change updates the `/lib/deployed_contracts.json` then,
+we have to publish on the NPM.
+
+* Update the `package.json` version.
+* Run `npm publish`
+* Git commit all the changes and push to the git server (e.g. github)
+* Git tag using `git tag -a v0.0.0 -m "message"`
+* Push the tag to the origin `git push origin tag v0.0.0`
