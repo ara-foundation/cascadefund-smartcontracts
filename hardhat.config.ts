@@ -2,6 +2,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import "dotenv/config";
+import "@nomicfoundation/hardhat-verify";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -19,6 +20,9 @@ const config: HardhatUserConfig = {
       url: process.env.BASE_SEPOLIA_NETWORK!,
       accounts: [process.env.BASE_SEPOLIA_PRIVKEY!],
     }
+  },
+  sourcify: {
+    enabled: false,
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY!,

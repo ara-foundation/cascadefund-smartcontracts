@@ -3,23 +3,19 @@
  * smartcontract
  */
 import hre from "hardhat";
-import { getDeployedAddress } from "./deployed-address";
+import { getDeployedContractAddress } from "./recorder";
 
 const EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000";
-const cascadeAccountName = "CascadeAccountModule#TransparentUpgradeableProxy";
-const categorySbomName = "CategorySbomModule#TransparentUpgradeableProxy";
-const categoryBusinessName = "CategoryBusinessModule#TransparentUpgradeableProxy";
-const hodleTokenName = "TestTokenModule#TestToken";
 const hyperpaymentRole = "0x4cca7bcb4ecab6a9629237484c704f867fbaf97cc795bfce8490a48f6e5db634";
 
 async function main() {
     const accs = await hre.ethers.getSigners();
     console.log(`Grant CategorySBOM to interact with the CascadeAccount by ${accs[0].address}`);
 
-    const cascadeAccountAddress = await getDeployedAddress(cascadeAccountName);
-    const categorySbomAddress = await getDeployedAddress(categorySbomName);
-    const categoryBusinessAddress = await getDeployedAddress(categoryBusinessName);
-    const hodleTokenAddress = await getDeployedAddress(hodleTokenName);
+    const cascadeAccountAddress = await getDeployedContractAddress("CascadeAccount");
+    const categorySbomAddress = await getDeployedContractAddress("CategorySBOM");
+    const categoryBusinessAddress = await getDeployedContractAddress("CategoryBusiness");
+    const hodleTokenAddress = await getDeployedContractAddress("Stablecoin");
 
     const cascadeAccount = await hre.ethers.getContractAt("CascadeAccount", cascadeAccountAddress);
     const hasRole = await cascadeAccount.hasRole(hyperpaymentRole, categorySbomAddress);
@@ -40,8 +36,10 @@ async function main() {
         await response.wait();
         console.log(`CategoryBusiness: ${response.hash} confirmed`);
     } else {
-        console.log(`CategoryBusiness: holde address was set.`);
+        console.log(`CategoryBusiness: hodle address was set.`);
     }
+
+    console.log(`Initial Link was set, call: npx hardhat run scripts/opensource.hyperpayment.spec.ts --network baseSepolia`);
 }
 
 main().catch((err) => {

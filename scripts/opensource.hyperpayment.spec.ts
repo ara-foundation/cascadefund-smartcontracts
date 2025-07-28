@@ -3,24 +3,19 @@
  * smartcontract
  */
 import hre from "hardhat";
-import { getDeployedAddress } from "./deployed-address";
 import { getOpenSourceSpecification, Spline } from "./hyperpayment.types";
+import { getDeployedContractAddress } from "./recorder";
 
-const hyperpaymentV1Name = "HyperpaymentV1Module#TransparentUpgradeableProxy";
-const categoryBusinessName = "CategoryBusinessModule#TransparentUpgradeableProxy";
-const categorySbomName = "CategorySbomModule#TransparentUpgradeableProxy";
-const categoryCustomerName = "CategoryCustomerModule#TransparentUpgradeableProxy"
 const hyperpaymentRole = "0xfc24bd2866d4f21a3c7a09cde981207397f26e9f9fadb9875868f03c1c5228ee";
-const tokenName = "TestTokenModule#TestToken";
 
 async function main() {
     const accs = await hre.ethers.getSigners();
     console.log(`Create Open-Source specification by ${accs[0].address}`);
 
-    const hyperpaymentV1Address = await getDeployedAddress(hyperpaymentV1Name);
+    const hyperpaymentV1Address = await getDeployedContractAddress("HyperpaymentV1");
     console.log(`HyperpaymentV1 address: ${hyperpaymentV1Address}`);
 
-    const categorySbomAddress = await getDeployedAddress(categorySbomName);
+    const categorySbomAddress = await getDeployedContractAddress("CategorySBOM");
     console.log(`CategorySBOM: ${categorySbomAddress} address`);
     const categorySbom = await hre.ethers.getContractAt("CategorySBOM", categorySbomAddress);
     
@@ -34,7 +29,7 @@ async function main() {
     }
 
 
-    const categoryBusinessAddress = await getDeployedAddress(categoryBusinessName);
+    const categoryBusinessAddress = await getDeployedContractAddress("CategoryBusiness");
     console.log(`CategoryBusiness: ${categoryBusinessAddress} address`);
     const categoryBusiness = await hre.ethers.getContractAt("CategoryBusiness", categoryBusinessAddress);
     
@@ -48,7 +43,7 @@ async function main() {
     }
 
 
-    const categoryCustomerAddress = await getDeployedAddress(categoryCustomerName);
+    const categoryCustomerAddress = await getDeployedContractAddress("CategoryCustomer");
     console.log(`CategoryCustomer: ${categoryCustomerAddress} address`);
     const categoryCustomer = await hre.ethers.getContractAt("CategoryCustomer", categoryCustomerAddress);
     
@@ -66,7 +61,7 @@ async function main() {
 }
 
 async function createSpecification(hyperpaymentV1Address: string) {
-    const tokenAddress = await getDeployedAddress(tokenName);
+    const tokenAddress = await getDeployedContractAddress("Stablecoin");
     console.log(`Token address: ${tokenAddress}`);
 
     const hyperpaymentV1 = await hre.ethers.getContractAt("HyperpaymentV1", hyperpaymentV1Address);

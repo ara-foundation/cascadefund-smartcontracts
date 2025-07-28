@@ -106,9 +106,9 @@ contract CategoryBusiness is Category, AccessControlUpgradeable {
 
     function _withdraw(uint specID, uint projectID, uint amount) internal {
         require(amount > 0, "Amount can not be 0");
-        require(projects[specID][projectID].withdrawer == msg.sender, "Caller is not a withdrawer");
+        require(projects[specID][projectID].withdrawer != address(0), "Caller is not a withdrawer");
         require(projects[specID][projectID].amount >= amount, "Not enough tokens");
-        IERC20(projects[specID][projectID].token).transfer(msg.sender, amount);
+        IERC20(projects[specID][projectID].token).transfer(projects[specID][projectID].withdrawer, amount);
         projects[specID][projectID].amount -= amount;
     }
 

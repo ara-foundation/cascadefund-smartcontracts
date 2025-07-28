@@ -1,4 +1,4 @@
-import { getDeployedAddress } from "./deployed-address";
+import { getDeployedContractAddress } from "./recorder";
 
 type ResourceName = string;
 type CategoryName = string;
@@ -30,14 +30,10 @@ type HyperpaymentSpecification = {
   }
 }
 
-const categoryBusinessName = "CategoryBusinessModule#TransparentUpgradeableProxy";
-const categorySbomName = "CategorySbomModule#TransparentUpgradeableProxy";
-const categoryCustomerName = "CategoryCustomerModule#TransparentUpgradeableProxy"
-
 export async function getOpenSourceSpecification(resourceAddress: string): Promise<HyperpaymentSpecification> {
-    const categoryBusinessAddress = await getDeployedAddress(categoryBusinessName);
-    const categorySbomAddress = await getDeployedAddress(categorySbomName);
-    const categoryCustomerAddress = await getDeployedAddress(categoryCustomerName);
+    const categoryBusinessAddress = await getDeployedContractAddress("CategoryBusiness");
+    const categorySbomAddress = await getDeployedContractAddress("CategorySBOM");
+    const categoryCustomerAddress = await getDeployedContractAddress("CategoryCustomer");
 
     let openSourceSpecification: HyperpaymentSpecification = {
         url: "hyperpayment.org/specification/opensource-hyperpayment-specification",
