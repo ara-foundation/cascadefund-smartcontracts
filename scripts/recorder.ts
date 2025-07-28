@@ -4,7 +4,7 @@ import { cwd } from "process";
 import fs from "fs";
 import { SMILEY } from "./emoji";
 
-type DeployedContracts = {
+export type DeployedContracts = {
     // chain id as a string
     [key: string]: {
         // Smartcontract name
@@ -16,7 +16,7 @@ type DeployedContracts = {
 }
 
 function getDeployedContractsUrl(): string {
-    const url = path.join(cwd(), "./deployed_contracts.json");
+    const url = path.join(cwd(), "./lib/deployed_contracts.json");
     return url;
 }
 
